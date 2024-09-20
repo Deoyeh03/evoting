@@ -21,7 +21,7 @@ const AdminAuth = ({ onLogin }) => {
 
   const handleLogin = (e) => {
     e.preventDefault();
-    setError(''); // Reset error on new submission
+    setError(''); 
 
     // Check if the provided credentials and token match
     if (email === validCredentials.email && password === validCredentials.password && token === validToken) {
