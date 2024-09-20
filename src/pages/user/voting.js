@@ -9,7 +9,8 @@ const Voting = () => {
   const [selectedPosition, setSelectedPosition] = useState(null);
   const [selectedCandidate, setSelectedCandidate] = useState(null);
   const [voteSubmitted, setVoteSubmitted] = useState(false);
-  const [votedPositions, setVotedPositions] = useState(new Set()); // Track voted positions
+  const [votedPositions, setVotedPositions] = useState(new Set());
+  const [hasVoted, setHasVoted] = useState(false); // Track if user has voted
 
   useEffect(() => {
     const unsubscribePositions = onSnapshot(collection(db, 'positions'), (snapshot) => {
@@ -35,23 +36,17 @@ const Voting = () => {
 
   const handleVote = async () => {
     if (selectedCandidate) {
-      // Check if the user has already voted for this position
+      // Check if the user has already voted
       const votesRef = collection(db, 'votes');
-      const q = query(votesRef, where("candidateId", "==", selectedCandidate.id));
-      const querySnapshot = await getDocs(q);
+      const querySnapshot = await getDocs(votesRef);
       
       if (querySnapshot.empty) {
-        // Check if the position is already voted on
-        if (!votedPositions.has(selectedPosition.id)) {
-          await addDoc(votesRef, { candidateId: selectedCandidate.id });
-          setVoteSubmitted(true);
-          setVotedPositions(prev => new Set(prev).add(selectedPosition.id)); // Add position to voted set
-          setSelectedCandidate(null);
-        } else {
-          alert("You have already voted for this position!");
-        }
+        await addDoc(votesRef, { candidateId: selectedCandidate.id });
+        setVoteSubmitted(true);
+        setHasVoted(true); // Set hasVoted to true
+        setSelectedCandidate(null);
       } else {
-        alert("You have already voted!");
+        alert("You have already voted for a candidate!");
       }
     }
   };
@@ -60,7 +55,7 @@ const Voting = () => {
     setSelectedPosition(null);
     setCandidates([]);
     setVoteSubmitted(false);
-    setSelectedCandidate(null); // Reset selected candidate when going back
+    setSelectedCandidate(null);
   };
 
   return (
@@ -83,10 +78,10 @@ const Voting = () => {
                   key={position.id} 
                   className="position-item"
                   onClick={() => {
-                    if (!votedPositions.has(position.id)) {
+                    if (!votedPositions.has(position.id) && !hasVoted) {
                       setSelectedPosition(position);
                     } else {
-                      alert("You have already voted for this position!");
+                      alert("You have already voted for this position or a candidate!");
                     }
                   }}
                 >
@@ -102,7 +97,11 @@ const Voting = () => {
                   <div 
                     key={candidate.id} 
                     className={`candidate-item ${selectedCandidate?.id === candidate.id ? 'selected' : ''}`}
-                    onClick={() => setSelectedCandidate(candidate)}
+                    onClick={() => {
+                      if (!hasVoted) {
+                        setSelectedCandidate(candidate);
+                      }
+                    }}
                   >
                     <h3>{candidate.name}</h3>
                     <p>{candidate.description}</p>
@@ -112,7 +111,7 @@ const Voting = () => {
               <button 
                 className="vote-button" 
                 onClick={handleVote} 
-                disabled={!selectedCandidate}
+                disabled={!selectedCandidate || hasVoted}
               >
                 Submit Vote
               </button>
